@@ -17,6 +17,13 @@ Create a `config.json` file like the below:
         "password": "changeme",
         "client_id": "qtbot"  // Optional, defaults to qtbot
     },
+    "on_start": [
+        {
+            "topic": "appliance/debug/set",
+            "message": "off"
+        }
+    ]
+
     "discord": [
         {
             "topic": "alert/#",
