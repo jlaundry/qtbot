@@ -20,6 +20,7 @@ const (
 )
 
 type LogAnalyticsConfig struct {
+	URL           string
 	Topic         string `json:"topic"`
 	WorkspaceId   string `json:"workspace_id"`
 	SharedKey     string `json:"shared_key"`
@@ -72,6 +73,11 @@ func PostLogAnalytics(entry LogEntry, config LogAnalyticsConfig) error {
 
 	signature := fmt.Sprintf("SharedKey %s:%s", config.WorkspaceId, hashedString)
 	url := fmt.Sprintf("https://%s.ods.opinsights.azure.com/api/logs?api-version=2016-04-01", config.WorkspaceId)
+
+	// Allow custom URL for testing
+	if config.URL != "" {
+		url = config.URL
+	}
 
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, bytes.NewReader([]byte(data)))
