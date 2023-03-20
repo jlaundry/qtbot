@@ -7,10 +7,11 @@ A simple golang app that helps with coordinating messages via MQTT, to help with
 
 ## Setup
 
-Create a `config.json` file like the below:
+Create a `qtbot.json` file like the below:
 
 ```json
 {
+    "debug": false,
     "mqtt_server": {
         "address": "tcp://localhost:1883",
         "username": "qtbot",
@@ -22,7 +23,7 @@ Create a `config.json` file like the below:
             "topic": "appliance/debug/set",
             "message": "off"
         }
-    ]
+    ],
 
     "discord": [
         {
