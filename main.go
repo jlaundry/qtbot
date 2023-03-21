@@ -13,6 +13,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/jlaundry/qtbot/discord"
 	"github.com/jlaundry/qtbot/log_analytics"
+	"github.com/jlaundry/qtbot/timestamped_message"
 )
 
 type MQTTServerConfig struct {
@@ -22,11 +23,17 @@ type MQTTServerConfig struct {
 	ClientID string `json:"client_id"`
 }
 
+type OnStart struct {
+	Topic   string `json:"topic"`
+	Message string `json:"message"`
+}
+
 type Config struct {
-	MQTT         MQTTServerConfig                 `json:"mqtt_server"`
-	LogAnalytics log_analytics.LogAnalyticsConfig `json:"log_analytics"`
-	Discord      discord.DiscordConfig            `json:"discord"`
-	Debug        bool                             `json:"debug"`
+	Debug        bool                               `json:"debug"`
+	MQTT         MQTTServerConfig                   `json:"mqtt_server"`
+	OnStart      []OnStart                          `json:"on_start"`
+	Discord      []discord.DiscordConfig            `json:"discord"`
+	LogAnalytics []log_analytics.LogAnalyticsConfig `json:"log_analytics"`
 }
 
 var config Config
@@ -44,7 +51,7 @@ func main() {
 	}()
 
 	// Load config
-	jsonFile, err := os.Open("config.json")
+	jsonFile, err := os.Open("qtbot.json")
 	if err != nil {
 		panic(err)
 	}
@@ -59,7 +66,15 @@ func main() {
 		config.MQTT.ClientID = "qtbot"
 	}
 
+	// if config.Debug {
+	// 	mqtt.ERROR = log.New(os.Stdout, "[ERROR] ", 0)
+	// 	mqtt.CRITICAL = log.New(os.Stdout, "[CRIT] ", 0)
+	// 	mqtt.WARN = log.New(os.Stdout, "[WARN]  ", 0)
+	// 	mqtt.DEBUG = log.New(os.Stdout, "[DEBUG] ", 0)
+	// }
+
 	opts := mqtt.NewClientOptions()
+
 	opts.AddBroker(config.MQTT.Address)
 	opts.SetClientID(config.MQTT.ClientID)
 	if config.MQTT.Username != "" {
@@ -68,9 +83,7 @@ func main() {
 	}
 
 	opts.SetDefaultPublishHandler(func(c mqtt.Client, m mqtt.Message) {
-		if config.Debug {
-			log.Printf("<- %s: %s\n", m.Topic(), m.Payload())
-		}
+		log.Printf("DEBUG defaultHandler <- %s: %s\n", m.Topic(), m.Payload())
 	})
 
 	opts.OnConnect = func(c mqtt.Client) {
@@ -86,26 +99,73 @@ func main() {
 		log.Fatal(token.Error())
 	}
 
-	fmt.Println("Connected")
 	defer client.Disconnect(2000)
 	defer log.Println("Disconnecting MQTT")
 
-	// Send wakeup messages
-
 	// Listeners for Discord
+	for i := range config.Discord {
+		processor := config.Discord[i]
+		queue := make(chan timestamped_message.TimestampedMessage)
+		log.Printf("created queue %v for topic %s", queue, processor.Topic)
+		defer close(queue)
+
+		token := client.Subscribe(processor.Topic, 2, func(c mqtt.Client, m mqtt.Message) {
+			// log.Printf("Discord (%s) %s: %s", processor.Topic, m.Topic(), m.Payload())
+			queue <- timestamped_message.NewTimestampedMessage(m)
+		})
+		token.Wait()
+
+		processor.Start(queue)
+	}
 
 	// Listeners for Log Analytics
+	for i := range config.LogAnalytics {
+		processor := config.LogAnalytics[i]
+		queue := make(chan timestamped_message.TimestampedMessage)
+		log.Printf("created queue %v for topic %s", queue, processor.Topic)
+		defer close(queue)
+
+		token := client.Subscribe(processor.Topic, 2, func(c mqtt.Client, m mqtt.Message) {
+			// log.Printf("LogAnalytics (%s) %s: %s", processor.Topic, m.Topic(), m.Payload())
+			queue <- timestamped_message.NewTimestampedMessage(m)
+		})
+		token.Wait()
+
+		processor.Start(queue)
+	}
+
+	// Send wakeup messages
+	for i := range config.OnStart {
+		on_start := config.OnStart[i]
+
+		log.Printf("DEBUG Sending on_start message '%s' to %s", on_start.Message, on_start.Topic)
+		PublishWithLogging(client, on_start.Topic, on_start.Message)
+	}
 
 	// Send Ready
-	client.Publish(fmt.Sprintf("%s/online", config.MQTT.ClientID), 0, false, "true")
+	PublishWithLogging(client, fmt.Sprintf("%s/online", config.MQTT.ClientID), "true")
 
 	logmsg := fmt.Sprintf("online, time is: %s", time.Now().UTC().Format(time.RFC3339Nano))
 	logtopic := fmt.Sprintf("%s/log", config.MQTT.ClientID)
-	client.Publish(logtopic, 0, false, logmsg)
+	PublishWithLogging(client, logtopic, logmsg)
 
 	// HTTP endpoints
 
 	<-done
 	fmt.Println("SIGINT/SIGTERM received, exiting")
-	client.Publish(fmt.Sprintf("%s/online", config.MQTT.ClientID), 0, false, "false")
+	PublishWithLogging(client, fmt.Sprintf("%s/online", config.MQTT.ClientID), "false")
+}
+
+func PublishWithLogging(client mqtt.Client, topic string, message string) {
+	token := client.Publish(topic, 0, false, message)
+	go func() {
+		_ = token.Wait() // Can also use '<-t.Done()' in releases > 1.2.0
+		if token.Error() != nil {
+			log.Printf("ERROR Failed to send '%s' to %s: %s",
+				message,
+				topic,
+				token.Error(),
+			)
+		}
+	}()
 }

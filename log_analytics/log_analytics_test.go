@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestPostLogAnalytics(t *testing.T) {
@@ -18,7 +19,8 @@ func TestPostLogAnalytics(t *testing.T) {
 
 	log.Print(server.URL)
 
-	entry := NewLogEntry("topic", "message")
+	timestamp := time.Now()
+	entry := NewLogEntry(timestamp, "topic", "message")
 	config := LogAnalyticsConfig{
 		URL:           server.URL,
 		WorkspaceId:   "test",
@@ -26,6 +28,6 @@ func TestPostLogAnalytics(t *testing.T) {
 		CustomLogName: "MQTTLog",
 	}
 
-	PostLogAnalytics(entry, config)
+	config.Post(entry)
 
 }

@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jlaundry/qtbot/timestamped_message"
 )
 
 const (
@@ -33,9 +35,9 @@ type LogEntry struct {
 	Message       string
 }
 
-func NewLogEntry(topic string, message string) LogEntry {
+func NewLogEntry(timestamp time.Time, topic string, message string) LogEntry {
 	return LogEntry{
-		TimeGenerated: time.Now().UTC().Format("2006-01-02T15:04:05.000Z"), //time.RFC3339Nano),
+		TimeGenerated: timestamp.UTC().Format("2006-01-02T15:04:05.000Z"), //time.RFC3339Nano),
 		Topic:         topic,
 		Message:       message,
 	}
@@ -58,7 +60,7 @@ func buildSignature(message, secret string) (string, error) {
 	return base64.StdEncoding.EncodeToString(mac.Sum(nil)), nil
 }
 
-func PostLogAnalytics(entry LogEntry, config LogAnalyticsConfig) error {
+func (config LogAnalyticsConfig) Post(entry LogEntry) error {
 
 	dateString := time.Now().UTC().Format(time.RFC1123)
 	dateString = strings.Replace(dateString, "UTC", "GMT", -1)
@@ -105,4 +107,13 @@ func PostLogAnalytics(entry LogEntry, config LogAnalyticsConfig) error {
 	}
 
 	return err
+}
+
+func (config LogAnalyticsConfig) Start(queue <-chan timestamped_message.TimestampedMessage) {
+	go func(queue <-chan timestamped_message.TimestampedMessage) {
+		for msg := range queue {
+			entry := NewLogEntry(msg.Timestamp, msg.Topic(), string(msg.Payload()))
+			config.Post(entry)
+		}
+	}(queue)
 }
