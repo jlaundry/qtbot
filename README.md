@@ -38,23 +38,6 @@ Create a `qtbot.json` file like the below:
             "shared_key": "",
             "custom_log_name": "MQTTLog"
         },
-    ],
-    "rest_api": {
-        "listen_address": ":8080",
-        "devices": [
-            {
-                "name": "deviceA",
-                "actions": ["on", "off", "toggle"],
-                "topic": "devices/deviceA"
-            }
-        ],
-        "groups": [
-            {
-                "name": "groupA",
-                "actions": ["on", "off", "toggle"],
-                "devices": ["deviceA"]
-            }
-        ],
-    }
+    ]
 }
 ```
