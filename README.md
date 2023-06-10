@@ -2,8 +2,9 @@
 
 A simple golang app that helps with coordinating messages via MQTT, to help with home automation use-cases, including:
 
-  * Logging channel messages to Azure Log Analytics and/or Discord
-  * (more to come...)
+  * Sending startup messages (i.e., because you keep forgetting to turn off debug outputs)
+  * Logging messages to Azure Log Analytics
+  * Logging messages to Discord
 
 ## Setup
 
