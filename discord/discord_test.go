@@ -9,22 +9,24 @@ import (
 )
 
 func TestDiscord204(t *testing.T) {
-	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(204)
-	}))
-	defer svr.Close()
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(204)
+		}))
+	defer server.Close()
 
 	msg := NewDiscordWebhookMessage(time.Now(), "topic", "message")
-	msg.Post(svr.URL)
+	msg.Post(server.URL)
 }
 
 func TestDiscord500(t *testing.T) {
-	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(500)
-	}))
-	defer svr.Close()
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(500)
+		}))
+	defer server.Close()
 
 	msg := NewDiscordWebhookMessage(time.Now(), "topic", "message")
-	err := msg.Post(svr.URL)
+	err := msg.Post(server.URL)
 	fmt.Printf("Err was: %e", err)
 }
