@@ -109,14 +109,14 @@ func (config *LogAnalyticsConfig) Post(entry LogEntry) error {
 		} else if resp.StatusCode == 503 {
 			ttl--
 			if ttl <= 0 {
-				log.Fatalf("%s (%d) after %d attempts \n\nPOSTdata was: %s", url, MAX_RETRIES, resp.StatusCode, data)
+				return fmt.Errorf("%s (%d) after %d attempts \n\nPOSTdata was: %s", url, MAX_RETRIES, resp.StatusCode, data)
 			}
 			sleepfor := time.Duration(RETRY_WAIT) * time.Second
 			log.Printf("%s (%d): sleeping for %s (ttl=%d)", url, resp.StatusCode, sleepfor, ttl)
 			time.Sleep(sleepfor)
 		} else {
 			bodyString, _ := io.ReadAll(resp.Body)
-			log.Fatalf("%s (%d): %s\n\nPOSTdata was: %s", url, resp.StatusCode, bodyString, data)
+			return fmt.Errorf("%s (%d): %s\n\nPOSTdata was: %s", url, resp.StatusCode, bodyString, data)
 		}
 	}
 }
