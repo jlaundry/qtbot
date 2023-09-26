@@ -13,6 +13,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/jlaundry/qtbot/discord"
 	"github.com/jlaundry/qtbot/log_analytics"
+	"github.com/jlaundry/qtbot/pagerduty"
 	"github.com/jlaundry/qtbot/timestamped_message"
 )
 
@@ -33,6 +34,7 @@ type Config struct {
 	MQTT         MQTTServerConfig                   `json:"mqtt_server"`
 	OnStart      []OnStart                          `json:"on_start"`
 	Discord      []discord.DiscordConfig            `json:"discord"`
+	PagerDuty    []pagerduty.PagerDutyConfig        `json:"pagerduty"`
 	LogAnalytics []log_analytics.LogAnalyticsConfig `json:"log_analytics"`
 }
 
@@ -111,6 +113,22 @@ func main() {
 
 		token := client.Subscribe(processor.Topic, 2, func(c mqtt.Client, m mqtt.Message) {
 			// log.Printf("Discord (%s) %s: %s", processor.Topic, m.Topic(), m.Payload())
+			queue <- timestamped_message.NewTimestampedMessage(m)
+		})
+		token.Wait()
+
+		processor.Start(queue)
+	}
+
+	// Listeners for PagerDuty
+	for i := range config.PagerDuty {
+		processor := config.PagerDuty[i]
+		queue := make(chan timestamped_message.TimestampedMessage)
+		log.Printf("created queue %v for topic %s", queue, processor.Topic)
+		defer close(queue)
+
+		token := client.Subscribe(processor.Topic, 2, func(c mqtt.Client, m mqtt.Message) {
+			// log.Printf("PagerDuty (%s) %s: %s", processor.Topic, m.Topic(), m.Payload())
 			queue <- timestamped_message.NewTimestampedMessage(m)
 		})
 		token.Wait()

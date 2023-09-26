@@ -32,6 +32,14 @@ Create a `qtbot.json` file like the below:
             "webhook": "https://discord.com/api/webhooks/1/your_key_here"
         },
     ],
+    "pagerduty": [
+        {
+            "topic": "alert/#",
+            "severity": "warning",
+            "integration_key": "00000000000000000000000000000000",
+            "url": "https://events.pagerduty.com/v2/enqueue"
+        }
+    ],
     "log_analytics": [
         {
             "topic": "#",
