@@ -4,21 +4,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 )
 
 func TestPagerDuty204(t *testing.T) {
-	expected := "cdas"
-
 	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		result := strings.TrimSpace("cdas")
-		if result != expected {
-			t.Errorf("\nexpected: %s\ngot     : %s", expected, result)
-		}
-
 		w.WriteHeader(204)
 	}))
 	defer svr.Close()
