@@ -19,6 +19,8 @@ import (
 
 const (
 	timeStampField = "TimeGenerated"
+	MAX_RETRIES    = 10
+	RETRY_WAIT     = 3.0
 )
 
 type LogAnalyticsConfig struct {
@@ -93,20 +95,30 @@ func (config *LogAnalyticsConfig) Post(entry LogEntry) error {
 	req.Header.Add("x-ms-date", dateString)
 	req.Header.Add("time-generated-field", timeStampField)
 
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
+	ttl := MAX_RETRIES
 
-	defer resp.Body.Close()
-	if resp.StatusCode == 200 {
-		// pass
-	} else {
-		bodyString, _ := io.ReadAll(resp.Body)
-		log.Fatalf("%s (%d): %s\n\nPOSTdata was: %s", url, resp.StatusCode, bodyString, data)
-	}
+	for {
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	return err
+		defer resp.Body.Close()
+		if resp.StatusCode == 200 {
+			return nil
+		} else if resp.StatusCode == 503 {
+			ttl--
+			if ttl <= 0 {
+				log.Fatalf("%s (%d) after %d attempts \n\nPOSTdata was: %s", url, MAX_RETRIES, resp.StatusCode, data)
+			}
+			sleepfor := time.Duration(RETRY_WAIT) * time.Second
+			log.Printf("%s (%d): sleeping for %s (ttl=%d)", url, resp.StatusCode, sleepfor, ttl)
+			time.Sleep(sleepfor)
+		} else {
+			bodyString, _ := io.ReadAll(resp.Body)
+			log.Fatalf("%s (%d): %s\n\nPOSTdata was: %s", url, resp.StatusCode, bodyString, data)
+		}
+	}
 }
 
 func (config *LogAnalyticsConfig) Start(queue <-chan timestamped_message.TimestampedMessage) {
