@@ -6,12 +6,15 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/jlaundry/qtbot/timestamped_message"
@@ -84,33 +87,43 @@ func (config *LogAnalyticsConfig) Post(entry LogEntry) error {
 	}
 
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", url, bytes.NewReader([]byte(data)))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Add("Log-Type", config.CustomLogName)
-	req.Header.Add("Authorization", signature)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("x-ms-date", dateString)
-	req.Header.Add("time-generated-field", timeStampField)
-
 	ttl := MAX_RETRIES
 
 	for {
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Fatal(err)
+		if ttl <= 0 {
+			return fmt.Errorf("ttl exceeded trying to POST to %s after %d attempts \n\nPOSTdata was: %s", url, MAX_RETRIES, data)
 		}
 
-		defer resp.Body.Close()
-		if resp.StatusCode == 200 {
+		req, err := http.NewRequest("POST", url, bytes.NewReader([]byte(data)))
+		if err != nil {
+			return err
+		}
+
+		req.Header.Add("Log-Type", config.CustomLogName)
+		req.Header.Add("Authorization", signature)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("x-ms-date", dateString)
+		req.Header.Add("time-generated-field", timeStampField)
+
+		resp, err := client.Do(req)
+		if err == nil {
+			defer resp.Body.Close()
+		}
+
+		if err != nil {
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				log.Printf("read timeout on %s: %e", url, err)
+				// Let us loop and try again...
+			} else if errors.Is(err, syscall.ECONNRESET) {
+				log.Printf("connection reset on %s: %e", url, err)
+				// Let us loop and try again...
+			} else {
+				log.Fatalf("read error on %s, %s:", url, err)
+			}
+
+		} else if resp.StatusCode == 200 {
 			return nil
 		} else if resp.StatusCode == 503 {
-			ttl--
-			if ttl <= 0 {
-				return fmt.Errorf("%s (%d) after %d attempts \n\nPOSTdata was: %s", url, MAX_RETRIES, resp.StatusCode, data)
-			}
 			sleepfor := time.Duration(RETRY_WAIT) * time.Second
 			log.Printf("%s (%d): sleeping for %s (ttl=%d)", url, resp.StatusCode, sleepfor, ttl)
 			time.Sleep(sleepfor)
@@ -118,6 +131,9 @@ func (config *LogAnalyticsConfig) Post(entry LogEntry) error {
 			bodyString, _ := io.ReadAll(resp.Body)
 			return fmt.Errorf("%s (%d): %s\n\nPOSTdata was: %s", url, resp.StatusCode, bodyString, data)
 		}
+
+		// We didn't return, therefore decrement and try again...
+		ttl--
 	}
 }
 
