@@ -86,7 +86,9 @@ func (config *LogAnalyticsConfig) Post(entry LogEntry) error {
 		url = config.URL
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Second * 60,
+	}
 	ttl := MAX_RETRIES
 
 	for {
