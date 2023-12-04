@@ -26,6 +26,11 @@ Create a `qtbot.json` file like the below:
         }
     ],
 
+    "stdout": [
+        {
+            "topic": "#"
+        },
+    ],
     "discord": [
         {
             "topic": "alert/#",
