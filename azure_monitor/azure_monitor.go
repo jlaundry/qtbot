@@ -37,7 +37,13 @@ func NewLogEntry(tsmsg timestamped_message.TimestampedMessage) LogEntry {
 }
 
 func (msg *LogEntry) Serialize() []byte {
-	jsonMsg, _ := json.Marshal(msg)
+	// The shape of the data must be a JSON array with item structure that matches the format expected by the stream in the DCR.
+	// If it is needed to send a single item within API call, the data should be sent as a single-item array.
+	// -- https://learn.microsoft.com/en-us/azure/azure-monitor/logs/logs-ingestion-api-overview#body
+	var body [1]LogEntry
+	body[0] = *msg
+	jsonMsg, _ := json.Marshal(body)
+	//log.Printf("sending %s", jsonMsg)
 	return []byte(jsonMsg)
 }
 
