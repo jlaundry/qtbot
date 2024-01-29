@@ -3,8 +3,9 @@
 A simple golang app that helps with coordinating messages via MQTT, to help with home automation use-cases, including:
 
   * Sending startup messages (i.e., because you keep forgetting to turn off debug outputs)
-  * Logging messages to Azure Log Analytics
+  * Logging messages to Azure Log Analytics (with both the new DCR, and/or old MMA APIs)
   * Logging messages to Discord
+  * Sending alerts to PagerDuty
 
 ## Setup
 
@@ -31,6 +32,14 @@ Create a `qtbot.json` file like the below:
             "topic": "#"
         },
     ],
+    "azure_monitor": [
+        {
+            "topic": "#",
+            "data_collecton_endpoint": "https://qtbot-0000.region-1.ingest.monitor.azure.com",
+            "immutable_id": "dcr-00000000000000000000000000000000",
+            "stream_name": "Custom-qtbot_CL",
+        }
+    ],
     "discord": [
         {
             "topic": "alert/#",
@@ -55,3 +64,7 @@ Create a `qtbot.json` file like the below:
     ]
 }
 ```
+
+### Azure Monitor (Log Analytics DCR) Setup
+
+Azure Monitor uses the `azidentity.NewDefaultAzureCredential`. If you're using a static Client ID/Secret, you'll need to set the `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` environment variables as well.
