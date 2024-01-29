@@ -11,6 +11,10 @@ import (
 	"github.com/jlaundry/qtbot/timestamped_message"
 )
 
+const (
+	MAX_RETRIES = 3
+)
+
 type AzureMonitorConfig struct {
 	Topic                  string `json:"topic"`
 	DataCollectionEndpoint string `json:"data_collecton_endpoint"`
@@ -52,12 +56,24 @@ func (config *AzureMonitorConfig) Start(queue <-chan timestamped_message.Timesta
 		_ = client
 
 		for rawMsg := range queue {
+
 			msg := NewLogEntry(rawMsg)
-			_, err := client.Upload(context.TODO(), config.ImmutableId, config.StreamName, msg.Serialize(), nil)
-			if err != nil {
-				log.Fatalf("Error sending to azingest client.Upload: %e", err)
-				//TODO: handle error
+			ttl := MAX_RETRIES
+
+			for {
+				if ttl <= 0 {
+					log.Fatalf("azingest ttl exceeded after %d attempts", MAX_RETRIES)
+				}
+
+				_, err := client.Upload(context.TODO(), config.ImmutableId, config.StreamName, msg.Serialize(), nil)
+				if err != nil {
+					log.Printf("Error sending to azingest client.Upload: %e ttl=%d", err, ttl)
+					ttl--
+				} else {
+					break
+				}
 			}
+
 		}
 	}(queue, config)
 }
