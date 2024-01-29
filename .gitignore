@@ -1,2 +1,4 @@
 qtbot.json
 qtbot
+.DS_Store
+__debug_bin*
