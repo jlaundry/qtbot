@@ -9,7 +9,7 @@ A simple golang app that helps with coordinating messages via MQTT, to help with
 
 ## Setup
 
-Create a `qtbot.json` file like the below:
+Create a `/opt/qtbot/qtbot.json` file like the below:
 
 ```json
 {
@@ -65,6 +65,36 @@ Create a `qtbot.json` file like the below:
 }
 ```
 
+Next, create a systemd service:
+
+```ini
+[Unit]
+Description=QT Bot
+Requires=mosquitto.service
+After=mosquitto.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/qtbot
+User=qtbot
+Group=qtbot
+ExecStart=/opt/qtbot/qtbot
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
 ### Azure Monitor (Log Analytics DCR) Setup
 
 Azure Monitor uses the `azidentity.NewDefaultAzureCredential`. If you're using a static Client ID/Secret, you'll need to set the `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` environment variables as well.
+
+The best way to do this is via `systemctl edit qtbot`, and set
+
+```ini
+[Service]
+Environment="AZURE_TENANT_ID=00000000-0000-0000-0000-000000000000"
+Environment="AZURE_CLIENT_ID=00000000-0000-0000-0000-000000000000"
+Environment="AZURE_CLIENT_SECRET=00-00~00~000000000000000000000000000~000"
+```
