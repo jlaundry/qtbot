@@ -53,14 +53,6 @@ Create a `/opt/qtbot/qtbot.json` file like the below:
             "integration_key": "00000000000000000000000000000000",
             "url": "https://events.pagerduty.com/v2/enqueue"
         }
-    ],
-    "log_analytics": [
-        {
-            "topic": "#",
-            "workspace_id": "00000000-0000-0000-0000-000000000000",
-            "shared_key": "",
-            "custom_log_name": "MQTTLog"
-        },
     ]
 }
 ```

@@ -13,7 +13,6 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/jlaundry/qtbot/azure_monitor"
 	"github.com/jlaundry/qtbot/discord"
-	"github.com/jlaundry/qtbot/log_analytics"
 	"github.com/jlaundry/qtbot/pagerduty"
 	"github.com/jlaundry/qtbot/stdout"
 	"github.com/jlaundry/qtbot/timestamped_message"
@@ -39,7 +38,6 @@ type Config struct {
 	AzureMonitor []azure_monitor.AzureMonitorConfig `json:"azure_monitor"`
 	Discord      []discord.DiscordConfig            `json:"discord"`
 	PagerDuty    []pagerduty.PagerDutyConfig        `json:"pagerduty"`
-	LogAnalytics []log_analytics.LogAnalyticsConfig `json:"log_analytics"`
 }
 
 var config Config
@@ -165,22 +163,6 @@ func main() {
 
 		token := client.Subscribe(processor.Topic, 2, func(c mqtt.Client, m mqtt.Message) {
 			// log.Printf("PagerDuty (%s) %s: %s", processor.Topic, m.Topic(), m.Payload())
-			queue <- timestamped_message.NewTimestampedMessage(m)
-		})
-		token.Wait()
-
-		processor.Start(queue)
-	}
-
-	// Listeners for Log Analytics
-	for i := range config.LogAnalytics {
-		processor := config.LogAnalytics[i]
-		queue := make(chan timestamped_message.TimestampedMessage)
-		log.Printf("created queue %v for topic %s", queue, processor.Topic)
-		defer close(queue)
-
-		token := client.Subscribe(processor.Topic, 2, func(c mqtt.Client, m mqtt.Message) {
-			// log.Printf("LogAnalytics (%s) %s: %s", processor.Topic, m.Topic(), m.Payload())
 			queue <- timestamped_message.NewTimestampedMessage(m)
 		})
 		token.Wait()
