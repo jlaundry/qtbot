@@ -93,8 +93,10 @@ func main() {
 	opts.OnConnect = func(c mqtt.Client) {
 		log.Println("MQTT connected")
 	}
+
+	opts.SetAutoReconnect(true)
 	opts.OnConnectionLost = func(c mqtt.Client, err error) {
-		log.Fatalf("MQTT connectionLost: %e", err)
+		log.Printf("MQTT connectionLost: %e", err)
 	}
 
 	client := mqtt.NewClient(opts)
