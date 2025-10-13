@@ -3,7 +3,7 @@ module github.com/jlaundry/qtbot
 go 1.24.0
 
 require (
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.12.0
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.0
 	github.com/Azure/azure-sdk-for-go/sdk/monitor/azingest v0.1.2
 	github.com/eclipse/paho.mqtt.golang v1.5.1
 )
