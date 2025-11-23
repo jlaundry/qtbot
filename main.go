@@ -127,7 +127,7 @@ func main() {
 	// Listeners for Azure Monitor
 	for i := range config.AzureMonitor {
 		processor := config.AzureMonitor[i]
-		queue := make(chan timestamped_message.TimestampedMessage)
+		queue := make(chan timestamped_message.TimestampedMessage, 512)
 		log.Printf("created queue %v for topic %s", queue, processor.Topic)
 		defer close(queue)
 
@@ -143,7 +143,7 @@ func main() {
 	// Listeners for Discord
 	for i := range config.Discord {
 		processor := config.Discord[i]
-		queue := make(chan timestamped_message.TimestampedMessage)
+		queue := make(chan timestamped_message.TimestampedMessage, 256)
 		log.Printf("created queue %v for topic %s", queue, processor.Topic)
 		defer close(queue)
 
@@ -159,7 +159,7 @@ func main() {
 	// Listeners for PagerDuty
 	for i := range config.PagerDuty {
 		processor := config.PagerDuty[i]
-		queue := make(chan timestamped_message.TimestampedMessage)
+		queue := make(chan timestamped_message.TimestampedMessage, 16)
 		log.Printf("created queue %v for topic %s", queue, processor.Topic)
 		defer close(queue)
 
